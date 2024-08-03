@@ -65,41 +65,41 @@ getGlobalLeaveTypes: (UserID) => {
         });
     });
 },
-
 getUserHolidayInfo: (UserID) => {
   return new Promise((resolve, reject) => {
-      const userHolidayInfoQuery = `
-         SELECT 
-    WorkingShiftHours, 
-    ( ( WorkingShiftHours * (HolidayEntitelementLeftDays - IFNULL((SELECT SUM(WorkingDays) FROM leave_request WHERE UserID = user.UserID AND StatusID = 1), 0)) ) 
-    + (HolidayEntitelementLeftHours - IFNULL((SELECT SUM(WorkingHours) FROM leave_request WHERE UserID = user.UserID AND StatusID = 1), 0)) ) DIV WorkingShiftHours AS HolidayEntitelementLeftDays,
-    ( ( WorkingShiftHours * (HolidayEntitelementLeftDays - IFNULL((SELECT SUM(WorkingDays) FROM leave_request WHERE UserID = user.UserID AND StatusID = 1), 0)) ) 
-    + (HolidayEntitelementLeftHours - IFNULL((SELECT SUM(WorkingHours) FROM leave_request WHERE UserID = user.UserID AND StatusID = 1), 0)) ) % WorkingShiftHours AS HolidayEntitelementLeftHours, 
-    client.WorkingWeekends 
-FROM user 
-LEFT JOIN client ON user.ClientID = client.ClientID 
-WHERE user.UserID = ?
-      `;
+    const userHolidayInfoQuery = `
+      SELECT 
+        WorkingShiftHours, 
+        ( ( WorkingShiftHours * (HolidayEntitelementLeftDays - IFNULL((SELECT SUM(WorkingDays) FROM leave_request WHERE UserID = user.UserID AND StatusID = 1), 0)) ) 
+        + (HolidayEntitelementLeftHours - IFNULL((SELECT SUM(WorkingHours) FROM leave_request WHERE UserID = user.UserID AND StatusID = 1), 0)) ) DIV WorkingShiftHours AS HolidayEntitelementLeftDays,
+        CAST(( ( WorkingShiftHours * (HolidayEntitelementLeftDays - IFNULL((SELECT SUM(WorkingDays) FROM leave_request WHERE UserID = user.UserID AND StatusID = 1), 0)) ) 
+        + (HolidayEntitelementLeftHours - IFNULL((SELECT SUM(WorkingHours) FROM leave_request WHERE UserID = user.UserID AND StatusID = 1), 0)) ) % WorkingShiftHours AS SIGNED) AS HolidayEntitelementLeftHours, 
+        client.WorkingWeekends 
+      FROM user 
+      LEFT JOIN client ON user.ClientID = client.ClientID 
+      WHERE user.UserID = ?
+    `;
 
-      db.query(userHolidayInfoQuery, UserID, (err, result) => {
-          if (err) {
-              reject({ message: "Error", error: err });
-          } else {
-              if (result.length === 0) {
-                  resolve({ message: "Error", Action: 'No User Found' });
-              } else {
-                  resolve({
-                      message: "Success",
-                      WorkingShiftHours: result[0].WorkingShiftHours,
-                      HolidayEntitelementLeftDays: result[0].HolidayEntitelementLeftDays,
-                      HolidayEntitelementLeftHours: result[0].HolidayEntitelementLeftHours,
-                      WorkingWeekends: result[0].WorkingWeekends
-                  });
-              }
-          }
-      });
+    db.query(userHolidayInfoQuery, UserID, (err, result) => {
+      if (err) {
+        reject({ message: "Error", error: err });
+      } else {
+        if (result.length === 0) {
+          resolve({ message: "Error", Action: 'No User Found' });
+        } else {
+          resolve({
+            message: "Success",
+            WorkingShiftHours: result[0].WorkingShiftHours,
+            HolidayEntitelementLeftDays:  parseInt(result[0].HolidayEntitelementLeftDays, 10),
+            HolidayEntitelementLeftHours: parseInt(result[0].HolidayEntitelementLeftHours, 10),
+            WorkingWeekends: result[0].WorkingWeekends
+          });
+        }
+      }
+    });
   });
 },
+
 
 submitLeave: (leaveData) => {
     return new Promise((resolve, reject) => {
@@ -732,10 +732,8 @@ checkAndResetHolidayEntitlement : () => {
                     reject(fetchErr);
                 } else {
                     const currentDateString = new Date().toISOString().split('T')[0]; // Get current date in 'YYYY-MM-DD' format
-                    console.log("date", currentDateString)
+     
                     const promises = results.map(result => {
-                        
-                    console.log("dateee", result.HolidayEntitlementResetDate)
 
                     const inputDate = new Date(result.HolidayEntitlementResetDate);
 
@@ -761,7 +759,6 @@ checkAndResetHolidayEntitlement : () => {
                                     if (userFetchErr) {
                                         return reject(userFetchErr);
                                     }
-                                    console.log("userResults", userResults)
                                     const updatePromises = userResults.map(user => {
                                         const updateUserQuery = `
                                             UPDATE user 
