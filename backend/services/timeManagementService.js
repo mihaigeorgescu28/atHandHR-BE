@@ -367,6 +367,91 @@ getTimeManagementBreakDown: (ClientID, ActionTypeID, TimeManagementStatus, DateR
     });
   });
 },
+
+// CRON - process all outstanding shifts which were not closed by users
+processOutstandingShifts: () => {
+  return new Promise((resolve, reject) => {
+    const outstandingShiftsQuery = `
+      SELECT UniqueShiftIdentifier, COUNT(*) AS CountRecords
+      FROM user_shift_times
+      GROUP BY UniqueShiftIdentifier
+      HAVING COUNT(*) < 2
+    `;
+
+    db.query(outstandingShiftsQuery, (err, result) => {
+      if (err) {
+        console.error('Error querying outstanding shifts:', err);
+        return reject({ status: 500, response: { error: 'Database query error' } });
+      }
+
+      if (result.length === 0) {
+        console.log('No outstanding shifts found.');
+        return resolve({ status: 200, response: 'No outstanding shifts found.' });
+      }
+
+      const promises = result.map(shift => {
+        return new Promise((resolve, reject) => {
+          const shiftDetailsQuery = `
+            SELECT UserID, ActionTypeID, UniqueShiftIdentifier, DateTime, Finished
+            FROM user_shift_times
+            WHERE UniqueShiftIdentifier = ?
+          `;
+
+          db.query(shiftDetailsQuery, [shift.UniqueShiftIdentifier], (err, details) => {
+            if (err) {
+              console.error('Error querying shift details:', err);
+              return reject({ status: 500, response: { error: 'Database query error' } });
+            }
+
+            const insertPromises = details.map(detail => {
+              if (detail.ActionTypeID === 1) {
+                const insertQuery = `
+                  INSERT INTO user_shift_times (UserID, ActionTypeID, UniqueShiftIdentifier, DateTime, Finished)
+                  VALUES (?, ?, ?, NOW(), ?)
+                `;
+
+                return new Promise((resolve, reject) => {
+                  db.query(insertQuery, [detail.UserID, 2, detail.UniqueShiftIdentifier, 1], (err, result) => {
+                    if (err) {
+                      console.error('Error inserting shift record:', err);
+                      return reject({ status: 500, response: { error: 'Database insert error' } });
+                    }
+                    resolve(result);
+                  });
+                });
+              } else {
+                return Promise.resolve();
+              }
+            });
+
+            // Run updateDailyShiftQuery after processing the insert statements
+            Promise.all(insertPromises)
+              .then(() => {
+                const updateDailyShiftQuery = `
+                  UPDATE user_shift_times
+                  SET Finished = 1
+                  WHERE UniqueShiftIdentifier = ?
+                `;
+
+                db.query(updateDailyShiftQuery, [shift.UniqueShiftIdentifier], (err, result) => {
+                  if (err) {
+                    console.error('Error updating shift record:', err);
+                    return reject({ status: 500, response: { error: 'Database update error' } });
+                  }
+                  resolve(result);
+                });
+              })
+              .catch(err => reject({ status: 500, response: { error: 'Error processing records' } }));
+          });
+        });
+      });
+
+      Promise.all(promises)
+        .then(() => resolve({ status: 200, response: 'Outstanding shifts processed successfully.' }))
+        .catch(err => reject(err));
+    });
+  });
+},
   
 };
 

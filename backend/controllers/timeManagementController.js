@@ -85,6 +85,15 @@ router.get('/TimeManagementBreakDown', async (req, res) => {
   }
 });
 
-
+// Endpoint to handle current shift actions
+router.post('/ProcessOutstandingShifts', async (req, res) => {
+  try {
+    const OutstandingShiftsResult = await TimeManagement.processOutstandingShifts();
+    res.status(OutstandingShiftsResult.status).json(OutstandingShiftsResult.response);
+  } catch (error) {
+    console.error('Error processing outstanding shifts:', error);
+    res.status(500).json({ error: 'Failed to process outstanding shifts. Please try again later.' });
+  }
+});
 
 export default router;
