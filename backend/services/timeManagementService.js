@@ -181,10 +181,10 @@ LIMIT 1;
   return new Promise((resolve, reject) => {
     const SignInOutReportToday = `
       SELECT
-        (SELECT COUNT(DISTINCT UserID) FROM user_shift_times usshti_inner WHERE usshti_inner.ActionTypeID = us.ActionTypeID AND DATE(usshti_inner.DateTime) = CURDATE()) AS NumberOfUsersSignedInOut,
-        ((SELECT COUNT(*) FROM user WHERE ClientID = u.ClientID AND user.Status = 'Active') -  (SELECT COUNT(DISTINCT UserID) FROM user_shift_times usshti_inner WHERE usshti_inner.ActionTypeID = us.ActionTypeID AND DATE(usshti_inner.DateTime) = CURDATE())) AS NumberOfUsersNotSignedInOut,
+        (SELECT COUNT(DISTINCT UserID) FROM user_shift_times usshti_inner WHERE usshti_inner.ActionTypeID = us.ActionTypeID AND usshti_inner.ClosedBySystem = 0 AND DATE(usshti_inner.DateTime) = CURDATE()) AS NumberOfUsersSignedInOut,
+        ((SELECT COUNT(*) FROM user WHERE ClientID = u.ClientID AND user.Status = 'Active') -  (SELECT COUNT(DISTINCT UserID) FROM user_shift_times usshti_inner WHERE usshti_inner.ActionTypeID = us.ActionTypeID AND usshti_inner.ClosedBySystem = 0 AND DATE(usshti_inner.DateTime) = CURDATE())) AS NumberOfUsersNotSignedInOut,
         (SELECT COUNT(*) FROM user WHERE ClientID = u.ClientID  AND user.Status = 'Active') AS TotalUsers,
-        ROUND(((SELECT COUNT(DISTINCT UserID) FROM user_shift_times usshti_inner WHERE usshti_inner.ActionTypeID = us.ActionTypeID AND DATE(usshti_inner.DateTime) = CURDATE()) / (SELECT COUNT(*) FROM user WHERE ClientID = u.ClientID AND user.Status = 'Active')) * 100, 0) AS PercentageOfUsersSignedInOutToday
+        ROUND(((SELECT COUNT(DISTINCT UserID) FROM user_shift_times usshti_inner WHERE usshti_inner.ActionTypeID = us.ActionTypeID AND usshti_inner.ClosedBySystem = 0 AND DATE(usshti_inner.DateTime) = CURDATE()) / (SELECT COUNT(*) FROM user WHERE ClientID = u.ClientID AND user.Status = 'Active')) * 100, 0) AS PercentageOfUsersSignedInOutToday
       FROM user_shift_times us
       LEFT JOIN user u ON u.UserID = us.UserID
       WHERE u.ClientID = ?
@@ -233,6 +233,7 @@ handleSignInOutLastUpdated: (ClientID, ActionTypeID) => {
       WHERE YEAR(a.DateTime) = YEAR(NOW())
       AND b.ClientID = ?
       AND a.ActionTypeID = ?
+      AND a.ClosedBySystem = 0
       ORDER BY a.DateTime DESC
       LIMIT 1;
     `;
@@ -261,6 +262,7 @@ getSignInOutMonthlyReport: (ClientID, ActionTypeID) => {
       WHERE
         us.ClientID = ?
         AND usshti.ActionTypeID = ?
+        AND usshti.ClosedBySystem = 0
       GROUP BY
         MONTH(usshti.DateTime);
     `;
@@ -293,9 +295,10 @@ getTimeManagementBreakDown: (ClientID, ActionTypeID, TimeManagementStatus, DateR
         FROM
           user_shift_times usshti
         LEFT JOIN user us ON usshti.UserID = us.UserID
-        WHERE us.ClientID = ${db.escape(ClientID)}
-            AND usshti.ActionTypeID = ${db.escape(ActionTypeID)} 
-            ${dateRangeCondition}
+        WHERE usshti.ClosedBySystem = 0
+        AND us.ClientID = ${db.escape(ClientID)}
+        AND usshti.ActionTypeID = ${db.escape(ActionTypeID)} 
+        ${dateRangeCondition}
       `;
     } else {
       timeManagementBreakDownQuery = `
@@ -305,7 +308,7 @@ getTimeManagementBreakDown: (ClientID, ActionTypeID, TimeManagementStatus, DateR
           IFNULL(
             DATE_FORMAT(
               (SELECT DateTime FROM user_shift_times usshti 
-              WHERE usshti.UserID = us.UserID AND usshti.ActionTypeID = ${db.escape(ActionTypeID)} 
+              WHERE usshti.ClosedBySystem = 0 AND usshti.UserID = us.UserID AND usshti.ActionTypeID = ${db.escape(ActionTypeID)} 
                   ${dateRangeCondition} 
               ORDER BY usshti.UserShiftTimeID DESC LIMIT 1),
               '%d/%m/%Y (%H:%i)'
@@ -315,23 +318,24 @@ getTimeManagementBreakDown: (ClientID, ActionTypeID, TimeManagementStatus, DateR
           CONCAT(IFNULL(us.WorkingShiftHours, 8), ' Hours') AS ExpectedShiftDurationHours,
           TIMEDIFF(
             (SELECT DateTime FROM user_shift_times usshti 
-            WHERE usshti.UserID = us.UserID AND usshti.ActionTypeID = 2 
+            WHERE usshti.ClosedBySystem = 0 AND usshti.UserID = us.UserID AND usshti.ActionTypeID = 2 
                 ${dateRangeCondition}  
             ORDER BY usshti.UserShiftTimeID DESC LIMIT 1),
             (SELECT DateTime FROM user_shift_times usshti 
-            WHERE usshti.UserID = us.UserID AND usshti.ActionTypeID = 1 
+            WHERE usshti.ClosedBySystem = 0 AND usshti.UserID = us.UserID AND usshti.ActionTypeID = 1 
                 ${dateRangeCondition}  
             ORDER BY usshti.UserShiftTimeID DESC LIMIT 1)
           ) AS ActualShiftDuration
         FROM
           user us
         WHERE
-          us.ClientID = ${db.escape(ClientID)} AND us.Status = 'Active' AND
+          us.ClientID = ${db.escape(ClientID)} AND us.Status = 'Active'
+          AND
           (
             (${db.escape(TimeManagementStatus)} = 'Pending' AND 'Pending' = IFNULL(
                 DATE_FORMAT(
                     (SELECT DateTime FROM user_shift_times usshti 
-                    WHERE usshti.UserID = us.UserID AND usshti.ActionTypeID = ${db.escape(ActionTypeID)} 
+                    WHERE usshti.ClosedBySystem = 0 AND usshti.UserID = us.UserID AND usshti.ActionTypeID = ${db.escape(ActionTypeID)} 
                         ${dateRangeCondition}  
                     ORDER BY usshti.UserShiftTimeID DESC LIMIT 1),
                     '%d/%m/%Y (%H:%i)'
@@ -341,7 +345,7 @@ getTimeManagementBreakDown: (ClientID, ActionTypeID, TimeManagementStatus, DateR
             (${db.escape(TimeManagementStatus)} = 'OnTime' AND 'OnTime' <> IFNULL(
                 DATE_FORMAT(
                     (SELECT DateTime FROM user_shift_times usshti 
-                    WHERE usshti.UserID = us.UserID AND usshti.ActionTypeID = ${db.escape(ActionTypeID)} 
+                    WHERE usshti.ClosedBySystem = 0 AND usshti.UserID = us.UserID AND usshti.ActionTypeID = ${db.escape(ActionTypeID)} 
                         ${dateRangeCondition}  
                     ORDER BY usshti.UserShiftTimeID DESC LIMIT 1),
                     '%d/%m/%Y (%H:%i)'
@@ -406,8 +410,8 @@ processOutstandingShifts: () => {
             const insertPromises = details.map(detail => {
               if (detail.ActionTypeID === 1) {
                 const insertQuery = `
-                  INSERT INTO user_shift_times (UserID, ActionTypeID, UniqueShiftIdentifier, DateTime, Finished)
-                  VALUES (?, ?, ?, NOW(), ?)
+                  INSERT INTO user_shift_times (UserID, ActionTypeID, UniqueShiftIdentifier, DateTime, Finished, ClosedBySystem)
+                  VALUES (?, ?, ?, NOW(), ?, 1)
                 `;
 
                 return new Promise((resolve, reject) => {
