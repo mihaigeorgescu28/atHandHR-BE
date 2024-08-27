@@ -378,6 +378,7 @@ processOutstandingShifts: () => {
     const outstandingShiftsQuery = `
       SELECT UniqueShiftIdentifier, COUNT(*) AS CountRecords
       FROM user_shift_times
+      WHERE ClosedBySystem = 0
       GROUP BY UniqueShiftIdentifier
       HAVING COUNT(*) < 2
     `;

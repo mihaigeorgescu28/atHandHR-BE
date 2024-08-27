@@ -316,7 +316,8 @@ getStaffOnLeave: (ClientID, DateRange) => {
           LEFT JOIN status st on st.StatusID = lr.StatusID
           WHERE DATE(lr.EndDateTime) >= CURDATE()
           AND u.ClientID = ?
-          AND DATE(lr.StartDateTime) <= DATE_ADD(CURDATE(), INTERVAL ? DAY)`;
+          AND DATE(lr.StartDateTime) <= DATE_ADD(CURDATE(), INTERVAL ? DAY)
+          ORDER BY lr.StartDateTime ASC`;
 
       db.query(totalStaffOfClientQuery, values, (err, result) => {
           if (err) {

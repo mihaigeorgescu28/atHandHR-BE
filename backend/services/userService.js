@@ -184,10 +184,10 @@ registerUser: (userData) => {
 
 
  // Function to log in user
- loginUser: (email, password) => {
+loginUser: (email, password) => {
   return new Promise((resolve, reject) => {
-    const checkTempPasswordSQL = 'SELECT UserID, VerifiedEmail FROM user WHERE EmailAddress = ? AND TemporaryPasswordUID = ?';
-    const checkLoginMatchSQL = 'SELECT COUNT(*) AS UserFound, UserID, VerifiedEmail, RoleID FROM user WHERE EmailAddress = ? AND Password = ?';
+    const checkTempPasswordSQL = 'SELECT UserID, VerifiedEmail, Status FROM user WHERE EmailAddress = ? AND TemporaryPasswordUID = ?';
+    const checkLoginMatchSQL = 'SELECT COUNT(*) AS UserFound, UserID, VerifiedEmail, RoleID, Status FROM user WHERE EmailAddress = ? AND Password = ?';
 
     const values = [email, password];
 
@@ -198,13 +198,22 @@ registerUser: (userData) => {
         if (tempResult.length === 1) {
           const userID = tempResult[0].UserID;
           const isVerified = tempResult[0].VerifiedEmail === 'Yes';
-          resolve({
-            success: true,
-            message: 'Temporary password found',
-            temporaryPasswordFound: true,
-            UserID: userID,
-            VerifiedEmail: isVerified
-          });
+          const status = tempResult[0].Status;
+
+          if (status !== 'Active') {
+            resolve({
+              success: false,
+              message: 'This account is not active! Please check with your administrator!'
+            });
+          } else {
+            resolve({
+              success: true,
+              message: 'Temporary password found',
+              temporaryPasswordFound: true,
+              UserID: userID,
+              VerifiedEmail: isVerified
+            });
+          }
         } else {
           // If no user with a temporary password is found, proceed with the existing login logic
           db.query(checkLoginMatchSQL, values, (err, result) => {
@@ -218,9 +227,16 @@ registerUser: (userData) => {
                 });
               } else if (result[0].UserFound === 1) {
                 const userID = result[0].UserID;
-                const roleID = result[0].RoleID
+                const roleID = result[0].RoleID;
                 const isVerified = result[0].VerifiedEmail === 'Yes';
-                if (isVerified) {
+                const status = result[0].Status;
+
+                if (status !== 'Active') {
+                  resolve({
+                    success: false,
+                    message: 'This account is not active! Please check with your administrator!'
+                  });
+                } else if (isVerified) {
                   resolve({
                     success: true,
                     message: 'Success',
@@ -246,6 +262,7 @@ registerUser: (userData) => {
     });
   });
 },
+
 
 
   // Function to verify user based on VerifyEmailUID
