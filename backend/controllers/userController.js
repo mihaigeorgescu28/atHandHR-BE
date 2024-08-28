@@ -8,8 +8,14 @@ const hostURL = process.env.REACT_APP_HOSTURL;
 
 router.get('/getUserData/:userID', async (req, res) => {
   try {
-    const userID = req.params.userID;
-    const userData = await UserService.getUserDataById(userID);
+    const { userID } = req.params;
+    const { clientID } = req.query; // Get ClientID from the query parameters
+
+    if (!clientID) {
+      return res.status(400).json({ error: 'ClientID is required' });
+    }
+
+    const userData = await UserService.getUserDataById(userID, clientID);
     
     if (userData.length === 0) {
       res.status(404).json({ error: 'User not found' });
@@ -21,6 +27,7 @@ router.get('/getUserData/:userID', async (req, res) => {
     res.status(500).json({ error: 'Failed to retrieve user data. Please try again later.' });
   }
 });
+
 
 // Handle user registration
 router.post('/register', async (req, res) => {

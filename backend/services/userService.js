@@ -7,7 +7,7 @@ import bcrypt from 'bcryptjs';
 
 
 const UserService = {
-  getUserDataById: (userID) => {
+  getUserDataById: (userID, clientID) => {
     const userDataQuery = `
       SELECT 
         us.UserID,
@@ -50,11 +50,11 @@ const UserService = {
       LEFT JOIN position p on us.PositionID = p.PositionID
       LEFT JOIN user us1 on us1.UserID = us.LineManagerID
       LEFT JOIN role ro on ro.RoleID = us.RoleID
-      WHERE us.UserID = ?
+      WHERE us.UserID = ? AND us.ClientID = ?
     `;
     
     return new Promise((resolve, reject) => {
-      db.query(userDataQuery, [userID], (error, result) => {
+      db.query(userDataQuery, [userID, clientID], (error, result) => {
         if (error) {
           reject(error);
         } else {
