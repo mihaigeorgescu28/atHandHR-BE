@@ -1,10 +1,11 @@
 // leaveController.js
 import express from "express";
 import LeaveService from '../services/leaveService.js';
+import authenticateToken from '../middleware/authenticateToken.js'; // Import the middleware
 
 const router = express.Router();
 
-router.post("/leaveType", async (req, res) => {
+router.post("/leaveType", authenticateToken, async (req, res) => {
     try {
         const { UserID } = req.body;
         const holidayTypes = await LeaveService.getHolidayTypes(UserID);
@@ -15,7 +16,7 @@ router.post("/leaveType", async (req, res) => {
     }
 });
 
-router.post("/globalLeaveTypes", async (req, res) => {
+router.post("/globalLeaveTypes", authenticateToken, async (req, res) => {
     try {
         const { UserID } = req.body;
         const globalHolidayTypes = await LeaveService.getGlobalLeaveTypes(UserID);
@@ -26,7 +27,7 @@ router.post("/globalLeaveTypes", async (req, res) => {
     }
 });
 
-router.post("/userHolidayInfo", async (req, res) => {
+router.post("/userHolidayInfo", authenticateToken, async (req, res) => {
   try {
       const { UserID } = req.body;
       const userHolidayInfo = await LeaveService.getUserHolidayInfo(UserID);
@@ -37,7 +38,7 @@ router.post("/userHolidayInfo", async (req, res) => {
   }
 });
 
-router.post("/submitLeave", async (req, res) => {
+router.post("/submitLeave", authenticateToken, async (req, res) => {
   try {
       const result = await LeaveService.submitLeave(req.body);
       res.status(200).json({ message: "Your leave request was submitted!" });
@@ -47,7 +48,7 @@ router.post("/submitLeave", async (req, res) => {
   }
 });
 
-router.get("/leaveRequests", async (req, res) => {
+router.get("/leaveRequests", authenticateToken, async (req, res) => {
   try {
       const { ClientID } = req.query;
       const leaveRequests = await LeaveService.getLeaveRequests(ClientID);
@@ -58,7 +59,7 @@ router.get("/leaveRequests", async (req, res) => {
   }
 });
 
-router.get("/LeaveRequestStatusBreakDown", async (req, res) => {
+router.get("/LeaveRequestStatusBreakDown", authenticateToken, async (req, res) => {
   try {
       const { ClientID, LeaveTypeGroupID, LeaveStatusID, LeaveTypeID } = req.query;
       const breakdown = await LeaveService.getLeaveRequestStatusBreakdown(ClientID, LeaveTypeGroupID, LeaveStatusID, LeaveTypeID);
@@ -69,7 +70,7 @@ router.get("/LeaveRequestStatusBreakDown", async (req, res) => {
   }
 });
 
-router.get("/staffOnLeave", async (req, res) => {
+router.get("/staffOnLeave", authenticateToken, async (req, res) => {
   try {
       const DateRange = req.query.DateRange || '0';
       const staffOnLeave = await LeaveService.getStaffOnLeave(req.query.ClientID, DateRange);
@@ -80,7 +81,7 @@ router.get("/staffOnLeave", async (req, res) => {
   }
 });
 
-router.get("/CurrentNumberOfLeaveRequestsByMonth", async (req, res) => {
+router.get("/CurrentNumberOfLeaveRequestsByMonth", authenticateToken, async (req, res) => {
   try {
       const { ClientID } = req.query;
       const leaveRequestsByMonth = await LeaveService.getCurrentNumberOfLeaveRequestsByMonth(ClientID);
@@ -91,7 +92,7 @@ router.get("/CurrentNumberOfLeaveRequestsByMonth", async (req, res) => {
   }
 });
 
-router.get("/CurrentNumberOfLeaveRequests", async (req, res) => {
+router.get("/CurrentNumberOfLeaveRequests", authenticateToken, async (req, res) => {
   try {
       const { ClientID } = req.query;
       const leaveRequestsCount = await LeaveService.getCurrentNumberOfLeaveRequests(ClientID);
@@ -102,7 +103,7 @@ router.get("/CurrentNumberOfLeaveRequests", async (req, res) => {
   }
 });
 
-router.post("/bankHoliday", async (req, res) => {
+router.post("/bankHoliday", authenticateToken, async (req, res) => {
   try {
       const bankHolidayStatus = await LeaveService.checkBankHoliday(req.body.Date);
       res.status(200).json(bankHolidayStatus);
@@ -112,7 +113,7 @@ router.post("/bankHoliday", async (req, res) => {
   }
 });
 
-router.post("/sameDayExistingLeave", async (req, res) => {
+router.post("/sameDayExistingLeave", authenticateToken, async (req, res) => {
     try {
         const sameDayExistingLeave = await LeaveService.checkSameDayExistingLeave(req.body.Date, req.body.UserID);
         res.status(200).json(sameDayExistingLeave);
@@ -122,7 +123,7 @@ router.post("/sameDayExistingLeave", async (req, res) => {
     }
   });
 
-router.post("/WithinBankHoliday", async (req, res) => {
+router.post("/WithinBankHoliday", authenticateToken, async (req, res) => {
   try {
     const bankHolidayInfo = await LeaveService.getBankHolidayInfo(req.body.start, req.body.end, req.body.diffInMs);
       res.status(200).json(bankHolidayInfo);
@@ -132,7 +133,7 @@ router.post("/WithinBankHoliday", async (req, res) => {
   }
 });
 
-router.get("/countStaffData", async (req, res) => {
+router.get("/countStaffData", authenticateToken, async (req, res) => {
   try {
       const clientID = req.query.ClientID;
       const staffData = await LeaveService.getCountStaffData(clientID);
@@ -143,7 +144,7 @@ router.get("/countStaffData", async (req, res) => {
   }
 });
 
-router.get("/leaveRequestsStatus", async (req, res) => {
+router.get("/leaveRequestsStatus", authenticateToken, async (req, res) => {
   try {
       const { ClientID, LeaveTypeGroupID } = req.query;
       const leaveRequestsStatus = await LeaveService.getLeaveRequestsStatus(ClientID, LeaveTypeGroupID);
@@ -154,7 +155,7 @@ router.get("/leaveRequestsStatus", async (req, res) => {
   }
 });
 
-router.get("/leaveRequestsType", async (req, res) => {
+router.get("/leaveRequestsType", authenticateToken, async (req, res) => {
   try {
       const { ClientID, LeaveTypeGroupID, StatusID } = req.query;
       const leaveRequestsType = await LeaveService.getLeaveRequestsType(ClientID, LeaveTypeGroupID, StatusID);
@@ -165,7 +166,7 @@ router.get("/leaveRequestsType", async (req, res) => {
   }
 });
 
-router.get("/leaveRequestLastUpdated", async (req, res) => {
+router.get("/leaveRequestLastUpdated", authenticateToken, async (req, res) => {
   try {
       const { ClientID, LeaveTypeID } = req.query;
       const lastUpdated = await LeaveService.getLeaveRequestLastUpdated(ClientID, LeaveTypeID);
@@ -176,7 +177,7 @@ router.get("/leaveRequestLastUpdated", async (req, res) => {
   }
 });
 
-router.post("/actionLeaveRequest", async (req, res) => {
+router.post("/actionLeaveRequest", authenticateToken, async (req, res) => {
     try {
         const { StatusID, LeaveRequestID, UserID } = req.body; // Retrieve from request body
         const actionLeaveRequest = await LeaveService.actionLeaveRequestStatus(StatusID, LeaveRequestID, UserID);
@@ -187,7 +188,7 @@ router.post("/actionLeaveRequest", async (req, res) => {
     }
 });
 
-router.post("/holidayEntitlementResetDate", async (req, res) => {
+router.post("/holidayEntitlementResetDate", authenticateToken, async (req, res) => {
     try {
         const holidayEntitlementResetDate = await LeaveService.checkAndResetHolidayEntitlement();
         res.status(200).json(holidayEntitlementResetDate);

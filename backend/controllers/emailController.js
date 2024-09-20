@@ -1,6 +1,7 @@
 import express from "express";
 import BrevoService from "../services/brevoService.js";
 import UserService from "../services/userService.js";
+import authenticateToken from '../middleware/authenticateToken.js'; // Import the middleware
 
 const hostURL = process.env.REACT_APP_HOSTURL;
 
@@ -8,7 +9,7 @@ const hostURL = process.env.REACT_APP_HOSTURL;
 
 const router = express.Router();
 
-router.post('/resetUserPassword', async (req, res) => {
+router.post('/resetUserPassword', authenticateToken, async (req, res) => {
     try {
         const userID = req.body.UserID;
 

@@ -2,11 +2,15 @@ import express from "express";
 import UserService from '../services/userService.js';
 import BrevoService from '../services/brevoService.js'; // Import the BrevoService
 import { upload } from '../utils/utils.js';
+import authenticateToken from '../middleware/authenticateToken.js'; // Import the middleware
+import jwt from 'jsonwebtoken';
+
 
 const router = express.Router();
 const hostURL = process.env.REACT_APP_HOSTURL;
 
-router.get('/getUserData/:userID', async (req, res) => {
+// Protected Route: Get User Data by ID (Requires Bearer Token)
+router.get('/getUserData/:userID', authenticateToken, async (req, res) => {
   try {
     const { userID } = req.params;
     const { clientID } = req.query; // Get ClientID from the query parameters
@@ -18,13 +22,13 @@ router.get('/getUserData/:userID', async (req, res) => {
     const userData = await UserService.getUserDataById(userID, clientID);
     
     if (userData.length === 0) {
-      res.status(404).json({ error: 'User not found' });
-    } else {
-      res.status(200).json(userData);
+      return res.status(404).json({ error: 'User not found' });
     }
+
+    return res.status(200).json(userData);
   } catch (error) {
     console.error('Error getting user data:', error);
-    res.status(500).json({ error: 'Failed to retrieve user data. Please try again later.' });
+    return res.status(500).json({ error: 'Failed to retrieve user data. Please try again later.' });
   }
 });
 
@@ -84,23 +88,48 @@ router.post('/register', async (req, res) => {
 });
 
 
-
-
-
-
+// Public login route (no authentication required)
 router.post('/login', async (req, res) => {
   try {
     const { email, password } = req.body;
     const loginResult = await UserService.loginUser(email, password);
 
+    if (loginResult.success) {
+      // Generate JWT token
+      const token = jwt.sign(
+        { UserID: loginResult.UserID, RoleID: loginResult.RoleID },
+        process.env.JWT_SECRET,
+        { expiresIn: '1h' } // Token valid for 1 hour
+      );
 
-      res.status(200).json(loginResult);
-    
+      console.log("token", token)
+
+      // Set the token in an HttpOnly cookie
+      res.cookie('token', token, {
+        httpOnly: true,  // Prevent access via JavaScript
+        secure: true,
+        sameSite: 'None', // Lax allows sending cookies for same-site requests
+        path: '/',       // Make the cookie available site-wide
+      });
+      
+      // Include necessary fields in the response
+      res.status(200).json({
+        success: true,
+        message: 'Login successful',
+        UserID: loginResult.UserID,
+        RoleID: loginResult.RoleID,
+        temporaryPasswordFound: loginResult.temporaryPasswordFound // or false if no temp password
+      });
+    } else {
+      res.status(401).json({ success: false, message: 'Invalid credentials' });
+    }
   } catch (error) {
-    console.error('Error logging in user:', error);
-    res.status(500).json({ error: 'Failed to login user. Please try again later.' });
+    console.error('Error during login:', error);
+    res.status(500).json({ success: false, message: 'Server error. Please try again later.' });
   }
 });
+
+
 
 // Endpoint to handle user verification
 router.post('/verifyUser', async (req, res) => {
@@ -135,7 +164,7 @@ router.post('/verifyUser', async (req, res) => {
 });
 
 // Endpoint to handle current client information
-router.post('/currentClient', async (req, res) => {
+router.post('/currentClient', authenticateToken, async (req, res) => {
   try {
     const { UserID } = req.body;
 
@@ -154,7 +183,7 @@ router.post('/currentClient', async (req, res) => {
 });
 
 // Endpoint to handle user details
-router.post('/getUserDetails', async (req, res) => {
+router.post('/getUserDetails', authenticateToken, async (req, res) => {
   try {
     const { UserID } = req.body;
 
@@ -174,7 +203,7 @@ router.post('/getUserDetails', async (req, res) => {
 
 
 // Endpoint to disable an employee
-router.post('/disableEmployee', async (req, res) => {
+router.post('/disableEmployee', authenticateToken, async (req, res) => {
   const { UserID } = req.body;
 
   // Validate userId
@@ -192,7 +221,7 @@ router.post('/disableEmployee', async (req, res) => {
 });
 
 // Endpoint to get line managers for a user
-router.post('/getLineManagers', async (req, res) => {
+router.post('/getLineManagers', authenticateToken, async (req, res) => {
   const { clientId } = req.body;
 
   try {
@@ -209,7 +238,7 @@ router.post('/getLineManagers', async (req, res) => {
 });
 
 // Endpoint to get roles for a user
-router.post('/getRoles', async (req, res) => {
+router.post('/getRoles', authenticateToken, async (req, res) => {
   const { clientId } = req.body;
 
   try {
@@ -226,7 +255,7 @@ router.post('/getRoles', async (req, res) => {
 });
 
 // Endpoint to get client positions for a user
-router.post('/getClientPositions', async (req, res) => {
+router.post('/getClientPositions', authenticateToken, async (req, res) => {
   const { clientId } = req.body;
 
   try {
@@ -242,7 +271,7 @@ router.post('/getClientPositions', async (req, res) => {
   }
 });
 
-router.post('/submitUserForm', upload.single('ProfilePicture'), async (req, res) => {
+router.post('/submitUserForm', authenticateToken, upload.single('ProfilePicture'), async (req, res) => {
   const { formType, UserID, ...fieldsToUpdate } = req.body;
   const emailaddress = { emailaddress: req.body.EmailAddress };
   const emailaddressstr = req.body.EmailAddress;
@@ -261,9 +290,11 @@ router.post('/submitUserForm', upload.single('ProfilePicture'), async (req, res)
       if (existingUserWithEmail.statusCode === 200) {
         // Email does not exist, proceed with inserting new user
         const insertUser = await UserService.insertUser(emailaddressstr, fieldsToUpdate, profilePicture);
-        const { temporaryPassword, firstName, userID } = insertUser;
+        console.log("insert user", insertUser)
+        console.log("fieldsToUpdate", fieldsToUpdate.FirstName)
+        const { temporaryPassword, firstname, userID } = insertUser;
         const additionalParams = {
-        firstName: `${firstName}`,
+        firstName: `${ fieldsToUpdate.FirstName}`,
         temporaryPassword: `${temporaryPassword}`,
         // Add other parameters as needed based on your email template placeholders
       };
@@ -272,7 +303,7 @@ router.post('/submitUserForm', upload.single('ProfilePicture'), async (req, res)
         // If registration is successful, send temporary password email with additional parameters
       const sendTemporaryPasswordResult = await BrevoService.sendTemporaryPasswordEmail(
         emailaddressstr,
-        firstName,
+        fieldsToUpdate.FirstName,
         temporaryPassword,
         additionalParams
       );
@@ -327,7 +358,7 @@ router.post('/submitUserForm', upload.single('ProfilePicture'), async (req, res)
 });
 
 
-router.get("/totalStaffOfClient", async (req, res) => {
+router.get("/totalStaffOfClient", authenticateToken, async (req, res) => {
   try {
     const { ClientID } = req.query;
     const totalStaff = await UserService.getTotalStaffOfClient(ClientID); // Use the function from UserService
@@ -338,7 +369,7 @@ router.get("/totalStaffOfClient", async (req, res) => {
   }
 });
 
-router.post('/upload', upload.single('file'), async (req, res) => {
+router.post('/upload', upload.single('file'), authenticateToken, async (req, res) => {
   try {
     const filePath = req.file.path;
     const result = await UserService.uploadFile(filePath);
@@ -349,7 +380,7 @@ router.post('/upload', upload.single('file'), async (req, res) => {
   }
 });
 
-router.post('/resetUserPassword', async (req, res) => {
+router.post('/resetUserPassword', authenticateToken, async (req, res) => {
   try {
     const { resetPasswordUID } = req.body;
 
@@ -380,7 +411,7 @@ router.post('/resetUserPassword', async (req, res) => {
 });
 
 // Endpoint to handle updating user password after reset
-router.post('/updateResetUserPassword', async (req, res) => {
+router.post('/updateResetUserPassword', authenticateToken, async (req, res) => {
   try {
     const { newPassword, resetPasswordUID } = req.body;
 
@@ -404,7 +435,7 @@ router.post('/updateResetUserPassword', async (req, res) => {
 });
 
 // Endpoint to handle updating user password after temporary password
-router.post('/updateTemporaryUserPassword', async (req, res) => {
+router.post('/updateTemporaryUserPassword', authenticateToken, async (req, res) => {
   try {
     const { newPassword, userId } = req.body;
 
@@ -437,6 +468,21 @@ router.post('/checkForTemporaryPassword', async (req, res) => {
 
     // If the function executes without errors and success is true, user with temporary password is found
     if (result.success) {
+      // Generate JWT token
+      const token = jwt.sign(
+        { UserID: result.UserID},
+        process.env.JWT_SECRET,
+        { expiresIn: '1h' } // Token valid for 1 hour
+      );
+
+      // Set the token in an HttpOnly cookie
+      res.cookie('token', token, {
+        httpOnly: true,    // Prevents JavaScript access to the cookie
+        secure: true,  // Required for HTTP connections (set to true in production with HTTPS)
+        sameSite: 'None',  // Required for cross-origin requests
+        path: '/',         // Available site-wide
+      });
+      
       res.status(200).json({
         success: true,
         message: 'User with temporary password found.',
@@ -460,7 +506,7 @@ router.post('/checkForTemporaryPassword', async (req, res) => {
 
 
 // Endpoint to get latest news for user
-router.post('/viewLatestNews', async (req, res) => {
+router.post('/viewLatestNews', authenticateToken, async (req, res) => {
   try {
     const { clientId } = req.body;
 

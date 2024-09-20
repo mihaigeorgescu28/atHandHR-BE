@@ -184,7 +184,7 @@ registerUser: (userData) => {
 
 
  // Function to log in user
-loginUser: (email, password) => {
+ loginUser: (email, password) => {
   return new Promise((resolve, reject) => {
     const checkTempPasswordSQL = 'SELECT UserID, VerifiedEmail, Status FROM user WHERE EmailAddress = ? AND TemporaryPasswordUID = ?';
     const checkLoginMatchSQL = 'SELECT COUNT(*) AS UserFound, UserID, VerifiedEmail, RoleID, Status FROM user WHERE EmailAddress = ? AND Password = ?';
@@ -215,7 +215,6 @@ loginUser: (email, password) => {
             });
           }
         } else {
-          // If no user with a temporary password is found, proceed with the existing login logic
           db.query(checkLoginMatchSQL, values, (err, result) => {
             if (err) {
               reject(err);
@@ -223,7 +222,7 @@ loginUser: (email, password) => {
               if (result[0].UserFound === 0) {
                 resolve({
                   success: false,
-                  message: 'The email address and/or the password selected are not valid. Please try different credentials.'
+                  message: 'Invalid email or password.'
                 });
               } else if (result[0].UserFound === 1) {
                 const userID = result[0].UserID;
@@ -239,9 +238,11 @@ loginUser: (email, password) => {
                 } else if (isVerified) {
                   resolve({
                     success: true,
-                    message: 'Success',
+                    message: 'Login successful',
                     UserID: userID,
-                    RoleID: roleID
+                    RoleID: roleID,
+                    VerifiedEmail: isVerified,
+                    temporaryPasswordFound: false // No temporary password
                   });
                 } else {
                   resolve({
@@ -249,12 +250,12 @@ loginUser: (email, password) => {
                     message: 'Email not verified! Please check your email inbox for the verification link.'
                   });
                 }
-              } else if (result[0].UserFound > 1) {
+              } else {
                 resolve({
                   success: false,
-                  message: 'Error! Please contact your administrator!'
+                  message: 'Multiple users found. Contact your administrator.'
                 });
-              } 
+              }
             }
           });
         }
@@ -262,6 +263,7 @@ loginUser: (email, password) => {
     });
   });
 },
+
 
 
 

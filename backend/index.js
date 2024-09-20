@@ -1,6 +1,7 @@
 import express from "express";
 import mysql from "mysql";
 import cors from "cors";
+import cookieParser from 'cookie-parser';  // Import cookie-parser
 import { fileURLToPath } from 'url';
 import dotenv from 'dotenv';
 import multer from "multer";
@@ -24,9 +25,15 @@ const app = express();
 // Middleware to parse JSON
 app.use(express.json());
 
-// Middleware for CORS
-app.use(cors());
+// Middleware to parse cookies
+app.use(cookieParser());  // Add this line
 
+// CORS configuration to allow credentials and specific origin
+app.use(cors({
+    origin: 'http://app.localhost:3000',  // Set this to the exact frontend origin
+    credentials: true,  // Allow credentials (cookies) to be included in requests
+  }));
+  
 // Set up static file server
 setupStaticFileServer(app);
 

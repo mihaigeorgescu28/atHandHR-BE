@@ -60,6 +60,10 @@ class BrevoService {
       }
 
       async sendTemporaryPasswordEmail(email, firstName, temporaryPassword) {
+        console.log("email", firstName)
+        console.log("email", email)
+        console.log("temporary pw", temporaryPassword)
+        
         const sendSmtpEmail = {
             to: [{ email, name: firstName }],
             templateId: 4, // Replace with your templateId

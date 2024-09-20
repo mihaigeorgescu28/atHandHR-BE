@@ -1,10 +1,11 @@
 import express from "express";
 import SiteMapService from '../services/siteMapService.js';
+import authenticateToken from '../middleware/authenticateToken.js'; // Import the middleware
 
 const router = express.Router();
 
 
-router.post('/NewsfeedData', async (req, res) => {
+router.post('/NewsfeedData', authenticateToken, async (req, res) => {
   try {;
     const { ClientID, LatestNewsID } = req.body
 
@@ -17,7 +18,7 @@ router.post('/NewsfeedData', async (req, res) => {
   }
 });
 
-router.post('/Icons', async (req, res) => {
+router.post('/Icons', authenticateToken, async (req, res) => {
   try {;
 
     const iconsResult = await SiteMapService.getIcons();
@@ -29,7 +30,7 @@ router.post('/Icons', async (req, res) => {
   }
 });
 
-router.post('/InsertNewsfeedRecord', async (req, res) => {
+router.post('/InsertNewsfeedRecord', authenticateToken, async (req, res) => {
   try {
     const { UserID, ClientID } = req.body;
     const insertNewsfeedRecordResult = await SiteMapService.insertNewsfeedRecord(UserID, ClientID, req.body);
@@ -42,7 +43,7 @@ router.post('/InsertNewsfeedRecord', async (req, res) => {
 });
 
 
-router.post('/DeleteNewsfeedRecord', async (req, res) => {
+router.post('/DeleteNewsfeedRecord', authenticateToken, async (req, res) => {
   try {
     const { UserID, LatestNewsID } = req.body; // Assuming ClientID is sent from the form
     const deleteNewsfeedRecordResult = await SiteMapService.deleteNewsfeedRecord(UserID, LatestNewsID);
@@ -54,7 +55,7 @@ router.post('/DeleteNewsfeedRecord', async (req, res) => {
   }
 });
 
-router.post('/EditNewsfeedRecord', async (req, res) => {
+router.post('/EditNewsfeedRecord', authenticateToken, async (req, res) => {
   try {
     const { UserID, LatestNewsID } = req.body; // Assuming ClientID is sent from the form
     const editNewsfeedRecordResult = await SiteMapService.editNewsfeedRecord(UserID, LatestNewsID, req.body);
@@ -66,7 +67,7 @@ router.post('/EditNewsfeedRecord', async (req, res) => {
   }
 });
 
-router.post('/EmployeePositionData', async (req, res) => {
+router.post('/EmployeePositionData', authenticateToken, async (req, res) => {
   try {;
     const { ClientID, PositionID } = req.body
 
@@ -80,7 +81,7 @@ router.post('/EmployeePositionData', async (req, res) => {
 });
 
 
-router.post('/EditPositionRecord', async (req, res) => {
+router.post('/EditPositionRecord', authenticateToken, async (req, res) => {
   try {
     const { UserID, PositionID } = req.body;
     const editPositionResult = await SiteMapService.editPositionRecord(UserID, PositionID, req.body);
@@ -92,7 +93,7 @@ router.post('/EditPositionRecord', async (req, res) => {
   }
 });
 
-router.post('/InsertPositionRecord', async (req, res) => {
+router.post('/InsertPositionRecord', authenticateToken, async (req, res) => {
   try {
     const { UserID, ClientID } = req.body;
     const insertPositionResult = await SiteMapService.insertPositionRecord(UserID, ClientID, req.body);
@@ -105,7 +106,7 @@ router.post('/InsertPositionRecord', async (req, res) => {
 });
 
 
-router.post('/DeletePositionRecord', async (req, res) => {
+router.post('/DeletePositionRecord', authenticateToken, async (req, res) => {
   try {
     const { UserID, PositionID } = req.body; 
     const deletePositionResult = await SiteMapService.deletePositionRecord(UserID, PositionID);
@@ -117,7 +118,7 @@ router.post('/DeletePositionRecord', async (req, res) => {
   }
 });
 
-router.post('/ClientLeaveTypeData', async (req, res) => {
+router.post('/ClientLeaveTypeData', authenticateToken, async (req, res) => {
   try {;
     const { ClientID, ClientLeaveTypeID } = req.body
 
@@ -132,7 +133,7 @@ router.post('/ClientLeaveTypeData', async (req, res) => {
 
 
 
-router.post('/EditClientLeaveTypeRecord', async (req, res) => {
+router.post('/EditClientLeaveTypeRecord', authenticateToken, async (req, res) => {
   try {
     const { UserID, ClientLeaveTypeID } = req.body;
     const editLeaveTypeResult = await SiteMapService.editLeaveTypeRecord(UserID, ClientLeaveTypeID, req.body);
@@ -144,7 +145,7 @@ router.post('/EditClientLeaveTypeRecord', async (req, res) => {
   }
 });
 
-router.post('/InsertClientLeaveTypeRecord', async (req, res) => {
+router.post('/InsertClientLeaveTypeRecord', authenticateToken, async (req, res) => {
   try {
     //const { ClientID, LeaveTypeID } = req.body;
     const insertLeaveTypeResult = await SiteMapService.insertLeaveTypeRecord(req.body);
@@ -157,7 +158,7 @@ router.post('/InsertClientLeaveTypeRecord', async (req, res) => {
 });
 
 
-router.post('/DeleteClientLeaveTypeRecord', async (req, res) => {
+router.post('/DeleteClientLeaveTypeRecord', authenticateToken, async (req, res) => {
   try {
     const { ClientLeaveTypeID } = req.body;
     const deleteLeaveTypeResult = await SiteMapService.deleteLeaveTypeRecord(ClientLeaveTypeID);
@@ -169,7 +170,7 @@ router.post('/DeleteClientLeaveTypeRecord', async (req, res) => {
   }
 });
 
-router.post('/ClientDefaultsData', async (req, res) => {
+router.post('/ClientDefaultsData', authenticateToken, async (req, res) => {
   try {;
     const { ClientID } = req.body
 
@@ -182,7 +183,7 @@ router.post('/ClientDefaultsData', async (req, res) => {
   }
 });
 
-router.post('/SubmitClientDefaultsRecord', async (req, res) => {
+router.post('/SubmitClientDefaultsRecord', authenticateToken, async (req, res) => {
   try {
     const submitClientDefaultsResult = await SiteMapService.submitClientDefaultsRecord(req.body);
 

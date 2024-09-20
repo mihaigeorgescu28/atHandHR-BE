@@ -1,10 +1,11 @@
 import express from "express";
 import TimeManagement from '../services/timeManagementService.js';
+import authenticateToken from '../middleware/authenticateToken.js'; // Import the middleware
 
 const router = express.Router();
 
 // Endpoint to handle daily shift actions (sign in/out)
-router.post('/dailyShift', async (req, res) => {
+router.post('/dailyShift', authenticateToken, async (req, res) => {
   try {
     const { UserID, password, Latitude, Longitude } = req.body;
 
@@ -19,7 +20,7 @@ router.post('/dailyShift', async (req, res) => {
 });
 
 // Endpoint to handle current shift actions
-router.post('/currentShift', async (req, res) => {
+router.post('/currentShift', authenticateToken, async (req, res) => {
   try {
     const { UserID } = req.body;
 
@@ -34,7 +35,7 @@ router.post('/currentShift', async (req, res) => {
 });
 
 // Endpoint to handle SignInOutReportToday
-router.get("/SignInOutReportToday", async (req, res) => {
+router.get("/SignInOutReportToday", authenticateToken, async (req, res) => {
   try {
     const { ClientID, ActionTypeID } = req.query;
 
@@ -49,7 +50,7 @@ router.get("/SignInOutReportToday", async (req, res) => {
 });
 
 // Endpoint to handle SignInOutLastUpdated
-router.get("/SignInOutLastUpdated", async (req, res) => {
+router.get("/SignInOutLastUpdated", authenticateToken, async (req, res) => {
   try {
     const { ClientID, ActionTypeID } = req.query;
 
@@ -63,7 +64,7 @@ router.get("/SignInOutLastUpdated", async (req, res) => {
   }
 });
 
-router.get('/SignInOutMonthlyReport', async (req, res) => {
+router.get('/SignInOutMonthlyReport', authenticateToken, async (req, res) => {
   try {
     const { ClientID, ActionTypeID } = req.query;
     const reportResult = await TimeManagement.getSignInOutMonthlyReport(ClientID, ActionTypeID);
@@ -74,7 +75,7 @@ router.get('/SignInOutMonthlyReport', async (req, res) => {
   }
 });
 
-router.get('/TimeManagementBreakDown', async (req, res) => {
+router.get('/TimeManagementBreakDown', authenticateToken, async (req, res) => {
   try {
     const { ClientID, ActionTypeID, TimeManagementStatus, DateRangeStart, DateRangeEnd } = req.query;
     const breakdownResult = await TimeManagement.getTimeManagementBreakDown(ClientID, ActionTypeID, TimeManagementStatus, DateRangeStart, DateRangeEnd);
@@ -86,7 +87,7 @@ router.get('/TimeManagementBreakDown', async (req, res) => {
 });
 
 // Endpoint to handle current shift actions
-router.post('/ProcessOutstandingShifts', async (req, res) => {
+router.post('/ProcessOutstandingShifts', authenticateToken, async (req, res) => {
   try {
     const OutstandingShiftsResult = await TimeManagement.processOutstandingShifts();
     res.status(OutstandingShiftsResult.status).json(OutstandingShiftsResult.response);
