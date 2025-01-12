@@ -351,6 +351,9 @@ getUserDetails: (UserID) => {
   return new Promise((resolve, reject) => {
     const userDetailsQuery = `
     SELECT 
+    FirstName,
+    LastName,
+    EmailAddress,
     CONCAT(FirstName, ' ', LastName) AS FullName, 
     ProfilePicture,
     CASE 
@@ -391,7 +394,9 @@ LIMIT 1;
           const userDetails = {
             success: true,
             message: 'Success',
+            FirstName: result[0].FirstName,
             FullName: result[0].FullName,
+            EmailAddress: result[0].EmailAddress,
             ProfilePic: result[0].ProfilePicture,
             DaysUntilNextHoliday: result[0].DaysUntilNextHoliday
           };
@@ -961,10 +966,65 @@ getLatestNews: (clientId) => {
       }
     });
   });
-}
+},
 
+// Function to get line managers for a user
+getCompanyDocumentGroups: (clientId) => {
+  return new Promise((resolve, reject) => {
+    // Construct SQL SELECT query
+    const selectQuery = `
+      SELECT DocumentGroupID, DocumentGroupName FROM document_group dogr
+      WHERE dogr.ClientID = ?
+      AND dogr.Status = 1
+    `;
 
+    // Execute the query
+    db.query(selectQuery, [clientId], (err, results) => {
+      if (err) {
+        reject(err);
+      } else {
+        if (results.length > 0) {
+          const companyDocumentGroups = results.map(result => ({
+            value: result.DocumentGroupID, // Assuming UserID is the ID property
+            label: result.DocumentGroupName,
+          }));
+          resolve({ CompanyDocumentGroups: companyDocumentGroups });
+        } else {
+          resolve({ error: 'Company Documents not found' });
+        }
+      }
+    });
+  });
+},
 
+// Function to get client ID by user ID
+getClientIdByUserId: (userId) => {
+  return new Promise((resolve, reject) => {
+    // Construct SQL SELECT query
+    const selectQuery = `
+      SELECT ClientID FROM user 
+      WHERE UserID = ? 
+      AND Status = 'Active' 
+      LIMIT 1
+    `;
+
+    // Execute the query
+    db.query(selectQuery, [userId], (err, results) => {
+      if (err) {
+        console.error('❌ Error fetching ClientID for UserID:', err);
+        reject(err); // Reject with the error
+      } else {
+        if (results.length > 0 && results[0].ClientID) {
+          console.log('✅ ClientID retrieved for UserID:', results[0].ClientID);
+          resolve(results[0].ClientID); // Resolve with the ClientID
+        } else {
+          console.warn('❌ No ClientID found for UserID:', userId);
+          resolve(null); // Resolve with null if no ClientID found
+        }
+      }
+    });
+  });
+},
   
 };
 

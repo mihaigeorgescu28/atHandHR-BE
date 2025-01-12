@@ -24,19 +24,19 @@ router.post('/resetUserPassword', authenticateToken, async (req, res) => {
         console.log('Received reset password request for userID:', userID);
 
         // Fetch the user's email and first name from the user service
-        const userData = await UserService.getUserDataById(userID);
+        const userData = await UserService.getUserDetails(userID);
 
         if (!userData) {
             console.log('User not found for userID:', userID);
             return res.status(404).json({ error: 'User not found' });
         }
-
-        const { FirstName, EmailAddress } = userData[0]; // Assuming userData is an array with a single object
+        console.log("userdata", userData)
+        const { FirstName, EmailAddress } = userData; // Assuming userData is an array with a single object
 
         // Generate reset password URL & fetch the string to send in email
         const resetUID = await UserService.generateResetUserPassword(userID);
 
-        const resetURL = `${hostURL}/auth/resetUserPassword/${resetUID}`;
+        const resetURL = `app.${hostURL}/auth/resetUserPassword/${resetUID}`;
 
         if (!resetURL) {
             console.log('User not found for userID:', userID);

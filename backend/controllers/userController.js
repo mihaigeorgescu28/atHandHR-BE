@@ -1,7 +1,7 @@
 import express from "express";
 import UserService from '../services/userService.js';
 import BrevoService from '../services/brevoService.js'; // Import the BrevoService
-import { upload } from '../utils/utils.js';
+import { uploadProfilePic } from '../utils/utils.js';
 import authenticateToken from '../middleware/authenticateToken.js'; // Import the middleware
 import jwt from 'jsonwebtoken';
 
@@ -44,7 +44,7 @@ router.post('/register', async (req, res) => {
       // Access verifyEmailUID from registrationResult
       const verifyEmailUID = registrationResult.verifyEmailUID;
 
-      const verificationURL = `${hostURL}/auth/verifyUser/${verifyEmailUID}`;
+      const verificationURL = `app.${hostURL}/auth/verifyUser/${verifyEmailUID}`;
 
       // Additional parameters for customizing the email template
       const additionalParams = {
@@ -99,18 +99,20 @@ router.post('/login', async (req, res) => {
       const token = jwt.sign(
         { UserID: loginResult.UserID, RoleID: loginResult.RoleID },
         process.env.JWT_SECRET,
-        { expiresIn: '1h' } // Token valid for 1 hour
+        { expiresIn: '1h' }
       );
 
       console.log("token", token)
 
       // Set the token in an HttpOnly cookie
-      res.cookie('token', token, {
-        httpOnly: true,  // Prevent access via JavaScript
+       res.cookie('token', token, {
+        httpOnly: true,
         secure: true,
-        sameSite: 'None', // Lax allows sending cookies for same-site requests
-        path: '/',       // Make the cookie available site-wide
+        sameSite: 'None',
+        domain: process.env.NODE_SUB_DOMAIN,
+        path: '/',
       });
+      
       
       // Include necessary fields in the response
       res.status(200).json({
@@ -121,7 +123,7 @@ router.post('/login', async (req, res) => {
         temporaryPasswordFound: loginResult.temporaryPasswordFound // or false if no temp password
       });
     } else {
-      res.status(401).json({ success: false, message: 'Invalid credentials' });
+      res.status(200).json({ success: false, message: "The email or password doesn't seem to match our records. Please try again." });
     }
   } catch (error) {
     console.error('Error during login:', error);
@@ -271,7 +273,7 @@ router.post('/getClientPositions', authenticateToken, async (req, res) => {
   }
 });
 
-router.post('/submitUserForm', authenticateToken, upload.single('ProfilePicture'), async (req, res) => {
+router.post('/submitUserForm', authenticateToken, uploadProfilePic.single('ProfilePicture'), async (req, res) => {
   const { formType, UserID, ...fieldsToUpdate } = req.body;
   const emailaddress = { emailaddress: req.body.EmailAddress };
   const emailaddressstr = req.body.EmailAddress;
@@ -369,7 +371,7 @@ router.get("/totalStaffOfClient", authenticateToken, async (req, res) => {
   }
 });
 
-router.post('/upload', upload.single('file'), authenticateToken, async (req, res) => {
+router.post('/upload', uploadProfilePic.single('file'), authenticateToken, async (req, res) => {
   try {
     const filePath = req.file.path;
     const result = await UserService.uploadFile(filePath);
@@ -477,11 +479,13 @@ router.post('/checkForTemporaryPassword', async (req, res) => {
 
       // Set the token in an HttpOnly cookie
       res.cookie('token', token, {
-        httpOnly: true,    // Prevents JavaScript access to the cookie
-        secure: true,  // Required for HTTP connections (set to true in production with HTTPS)
-        sameSite: 'None',  // Required for cross-origin requests
-        path: '/',         // Available site-wide
+        httpOnly: true,
+        secure: true,
+        sameSite: 'None',
+        domain: 'app.athandhr.com',
+        path: '/',
       });
+      
       
       res.status(200).json({
         success: true,
@@ -532,6 +536,23 @@ router.post('/viewLatestNews', authenticateToken, async (req, res) => {
       success: false,
       message: 'Failed to get latest news',
     });
+  }
+});
+
+// Endpoint to get line managers for a user
+router.post('/getCompanyDocumentGroups', authenticateToken, async (req, res) => {
+  const { clientId } = req.body;
+
+  try {
+    const result = await UserService.getCompanyDocumentGroups(clientId);
+    if (result.CompanyDocumentGroups) {
+      res.status(200).json(result);
+    } else {
+      res.status(404).json(result);
+    }
+  } catch (error) {
+    console.error('Error fetching line managers:', error);
+    res.status(500).json({ error: 'Internal Server Error' });
   }
 });
 
