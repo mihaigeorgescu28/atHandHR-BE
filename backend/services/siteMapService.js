@@ -560,8 +560,9 @@ const SiteMapService = {
           reject({ status: 500, response: "Error executing SQL query" });
         } else {
           if (result.length === 0) {
-            resolve({ status: 404, response: { success: false, result: [] } });
-          } else {
+            resolve({ status: 200, response: { success: true, result: [] } }); // Return an empty array instead of 404
+          }
+           else {
             // Map each row to process UsersID and PositionsID as arrays
             const processedResult = result.map((row) => ({
               ...row,

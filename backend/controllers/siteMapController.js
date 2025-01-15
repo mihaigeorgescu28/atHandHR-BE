@@ -208,7 +208,7 @@ router.post('/DocumentGroupsDataAdmin', authenticateToken, async (req, res) => {
 });
 
 router.post('/CompanyDocumentsDataAdmin', authenticateToken, async (req, res) => {
-  try {;
+  try {
     const { ClientID, CompanyDocumentID } = req.body
 
     const companyDocumentsDataResult = await SiteMapService.getCompanyDocumentsData(ClientID, CompanyDocumentID);
